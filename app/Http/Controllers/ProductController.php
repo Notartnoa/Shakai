@@ -43,13 +43,13 @@ class ProductController extends Controller
         $validated = $request->validate([
             'name'        => ['required', 'string', 'max:255'],
             'cover'       => ['required', 'image', 'mimes:png,jpg,jpeg', 'max:2048'],
-            'path_file'   => ['required', 'file', 'mimes:zip', 'max:10240'], // 10MB
+            'file_url'    => ['required', 'url', 'max:500'], // Google Drive link
             'about'       => ['required', 'string', 'max:65535'],
-            'category_id' => ['required', 'integer'],
+            'category_id' => ['required', 'integer', 'exists:categories,id'],
             'price'       => ['required', 'integer', 'min:0'],
 
             'detail_images'   => ['required', 'array', 'min:1', 'max:4'],
-            'detail_images.*' => ['image', 'mimes:png,jpg,jpeg', 'max:16096'], // 4MB per image
+            'detail_images.*' => ['image', 'mimes:png,jpg,jpeg', 'max:4096'], // 4MB per image
 
             'file_formats'   => ['required', 'array', 'min:1'],
             'file_formats.*' => ['string', 'max:50'],
@@ -63,12 +63,7 @@ class ProductController extends Controller
                 $validated['cover'] = $request->file('cover')->store('product_covers', 'public');
             }
 
-            // 2. Upload ZIP File
-            if ($request->hasFile('path_file')) {
-                $validated['path_file'] = $request->file('path_file')->store('product_files', 'public');
-            }
-
-            // 3. Upload Detail Images
+            // 2. Upload Detail Images
             if ($request->hasFile('detail_images')) {
                 $detailPaths = [];
                 foreach ($request->file('detail_images') as $image) {
@@ -77,12 +72,12 @@ class ProductController extends Controller
                 $validated['detail_images'] = json_encode($detailPaths);
             }
 
-            // 4. Set additional fields
-            $validated['slug'] = Str::slug($request->name);
+            // 3. Set additional fields
+            $validated['slug'] = Str::slug($request->name) . '-' . Str::random(5);
             $validated['creator_id'] = Auth::id();
             $validated['file_formats'] = implode(',', $request->file_formats);
 
-            // 5. SIMPAN SEKALI SAJA (FIX DUPLIKASI!)
+            // 4. Create product
             Product::create($validated);
 
             DB::commit();
@@ -90,10 +85,9 @@ class ProductController extends Controller
             return redirect()->route('admin.products.index')->with('success', 'Product Created Successfully');
         } catch (\Exception $e) {
             DB::rollBack();
-            $error = ValidationException::withMessages([
+            throw ValidationException::withMessages([
                 'system_error' => ['System Error: ' . $e->getMessage()],
             ]);
-            throw $error;
         }
     }
 
@@ -125,13 +119,13 @@ class ProductController extends Controller
         $validated = $request->validate([
             'name'        => ['required', 'string', 'max:255'],
             'cover'       => ['sometimes', 'image', 'mimes:png,jpg,jpeg', 'max:2048'],
-            'path_file'   => ['sometimes', 'file', 'mimes:zip', 'max:10240'], // 10MB
+            'file_url'    => ['required', 'url', 'max:500'], // Google Drive link
             'about'       => ['required', 'string', 'max:65535'],
-            'category_id' => ['required', 'integer'],
+            'category_id' => ['required', 'integer', 'exists:categories,id'],
             'price'       => ['required', 'integer', 'min:0'],
 
             'detail_images'   => ['sometimes', 'array', 'min:1', 'max:4'],
-            'detail_images.*' => ['image', 'mimes:png,jpg,jpeg', 'max:16096'],
+            'detail_images.*' => ['image', 'mimes:png,jpg,jpeg', 'max:4096'],
 
             'file_formats'   => ['required', 'array', 'min:1'],
             'file_formats.*' => ['string', 'max:50'],
@@ -142,25 +136,22 @@ class ProductController extends Controller
         try {
             // Update cover if new file uploaded
             if ($request->hasFile('cover')) {
+                // Delete old cover
                 if ($product->cover) {
                     Storage::disk('public')->delete($product->cover);
                 }
                 $validated['cover'] = $request->file('cover')->store('product_covers', 'public');
             }
 
-            // Update ZIP file if new file uploaded
-            if ($request->hasFile('path_file')) {
-                if ($product->path_file) {
-                    Storage::disk('public')->delete($product->path_file);
-                }
-                $validated['path_file'] = $request->file('path_file')->store('product_files', 'public');
-            }
-
             // Update detail images if new files uploaded
             if ($request->hasFile('detail_images')) {
                 // Delete old images
                 if ($product->detail_images) {
-                    foreach (json_decode($product->detail_images, true) as $oldPath) {
+                    $oldImages = is_array($product->detail_images)
+                        ? $product->detail_images
+                        : json_decode($product->detail_images, true);
+
+                    foreach ($oldImages as $oldPath) {
                         Storage::disk('public')->delete($oldPath);
                     }
                 }
@@ -173,7 +164,11 @@ class ProductController extends Controller
                 $validated['detail_images'] = json_encode($detailPaths);
             }
 
-            $validated['slug'] = Str::slug($request->name);
+            // Update slug only if name changed
+            if ($product->name !== $request->name) {
+                $validated['slug'] = Str::slug($request->name) . '-' . Str::random(5);
+            }
+
             $validated['file_formats'] = implode(',', $request->file_formats ?? []);
 
             $product->update($validated);
@@ -185,10 +180,9 @@ class ProductController extends Controller
                 ->with('success', 'Product Updated Successfully');
         } catch (\Exception $e) {
             DB::rollBack();
-            $error = ValidationException::withMessages([
+            throw ValidationException::withMessages([
                 'system_error' => ['System Error: ' . $e->getMessage()],
             ]);
-            throw $error;
         }
     }
 
@@ -202,11 +196,12 @@ class ProductController extends Controller
             if ($product->cover) {
                 Storage::disk('public')->delete($product->cover);
             }
-            if ($product->path_file) {
-                Storage::disk('public')->delete($product->path_file);
-            }
             if ($product->detail_images) {
-                foreach (json_decode($product->detail_images, true) as $path) {
+                $images = is_array($product->detail_images)
+                    ? $product->detail_images
+                    : json_decode($product->detail_images, true);
+
+                foreach ($images as $path) {
                     Storage::disk('public')->delete($path);
                 }
             }
@@ -215,10 +210,9 @@ class ProductController extends Controller
 
             return redirect()->route('admin.products.index')->with('success', 'Product Deleted Successfully');
         } catch (\Exception $e) {
-            $error = ValidationException::withMessages([
+            throw ValidationException::withMessages([
                 'system_error' => ['System Error: ' . $e->getMessage()],
             ]);
-            throw $error;
         }
     }
 }

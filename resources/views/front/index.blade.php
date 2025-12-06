@@ -75,9 +75,16 @@
                     <a href="{{ route('front.details', $product->slug) }}"
                         class="thumbnail w-full h-[180px] flex shrink-0 overflow-hidden relative">
                         <img src="{{ Storage::url($product->cover) }}" class="w-full h-full object-cover" alt="thumbnail">
-                        <p class="backdrop-blur bg-black/30 rounded-[4px] p-[4px_8px] absolute top-3 right-[14px] z-10">
-                            Rp {{ number_format($product->price) }}
-                        </p>
+
+                        @if($product->price == 0)
+                            <p class="backdrop-blur bg-emerald-500/90 text-white font-semibold rounded-[4px] p-[4px_10px] absolute top-3 right-[14px] z-10">
+                                FREE
+                            </p>
+                        @else
+                            <p class="backdrop-blur bg-black/50 rounded-[4px] p-[4px_8px] absolute top-3 right-[14px] z-10">
+                                Rp {{ number_format($product->price, 0, ',', '.') }}
+                            </p>
+                        @endif
                     </a>
                     <div class="p-[10px_14px_12px] h-full flex flex-col justify-between gap-[14px]">
                         <div class="flex flex-col gap-1">
@@ -100,6 +107,9 @@
                     </div>
                 </div>
             @empty
+                <div class="col-span-4 text-center py-10">
+                    <p class="text-belibang-grey">No products available yet.</p>
+                </div>
             @endforelse
 
         </div>

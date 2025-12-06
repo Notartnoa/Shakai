@@ -14,17 +14,17 @@ return new class extends Migration
         Schema::create('products', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('slug');
-            $table->string('cover');
-            $table->unsignedBigInteger('price');
+            $table->string('slug')->unique();
+            $table->string('cover'); // Thumbnail image
+            $table->json('detail_images')->nullable(); // Array of detail image paths
+            $table->unsignedBigInteger('price')->default(0); // 0 = free
             $table->text('about');
-            $table->string('path_file');
+            $table->string('file_url'); // Google Drive link (menggantikan path_file)
+            $table->string('file_formats')->nullable(); // comma separated: figma,laravel,react_js
             $table->foreignId('category_id')->constrained()->onDelete('cascade');
-            $table->unsignedBigInteger('creator_id');
+            $table->foreignId('creator_id')->constrained('users')->onDelete('cascade');
             $table->softDeletes();
             $table->timestamps();
-
-            $table->foreign('creator_id')->references('id')->on('users')->onDelete('cascade');
         });
     }
 

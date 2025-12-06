@@ -10,14 +10,11 @@ class ProductOrder extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = [
-        'product_id',
-        'buyer_id',
-        'creator_id',
-        'total_price',
-        'is_paid',
-        'proof',
-        'snap_token', // Tambahkan ini
+    protected $guarded = ['id'];
+
+    protected $casts = [
+        'is_paid' => 'boolean',
+        'paid_at' => 'datetime',
     ];
 
     public function Product()
@@ -28,5 +25,18 @@ class ProductOrder extends Model
     public function Buyer()
     {
         return $this->belongsTo(User::class, 'buyer_id');
+    }
+
+    public function Creator()
+    {
+        return $this->belongsTo(User::class, 'creator_id');
+    }
+
+    /**
+     * Check if order is paid
+     */
+    public function isPaid(): bool
+    {
+        return $this->is_paid === true;
     }
 }

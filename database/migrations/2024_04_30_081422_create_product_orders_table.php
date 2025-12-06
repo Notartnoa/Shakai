@@ -13,12 +13,16 @@ return new class extends Migration
     {
         Schema::create('product_orders', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('creator_id'); // yg pnya product
             $table->foreignId('product_id')->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('creator_id'); // pemilik product
             $table->unsignedBigInteger('buyer_id'); // pembeli
-            $table->unsignedBigInteger('total_price'); // harga total
-            $table->boolean('is_paid'); // dia udh bayar apa blm
-            $table->string('proof'); // bukti pembayaran
+            $table->unsignedBigInteger('total_price');
+            $table->boolean('is_paid')->default(false);
+            $table->string('proof')->nullable(); // untuk simpan transaction_id dari midtrans
+            $table->string('snap_token')->nullable(); // token dari midtrans
+            $table->string('midtrans_order_id')->nullable(); // order id yang dikirim ke midtrans
+            $table->string('payment_type')->nullable(); // gopay, bank_transfer, etc
+            $table->timestamp('paid_at')->nullable(); // kapan dibayar
             $table->softDeletes();
             $table->timestamps();
 

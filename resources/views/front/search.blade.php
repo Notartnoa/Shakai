@@ -1,5 +1,5 @@
 @extends('front.layouts.app')
-@section('title', 'Mama Nadya Marketplace')
+@section('title', 'Sakhai')
 @section('content')
 
     {{-- karena di dlm compponent maka manggilnya sprti ini --}}
