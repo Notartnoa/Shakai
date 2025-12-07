@@ -2,8 +2,7 @@
 @section('title', 'Sakhai')
 @section('content')
 
-    {{-- karena di dlm compponent maka manggilnya sprti ini --}}
-
+    <x-navbar />
 
     <header
         class="w-full pt-[74px] pb-[34px] bg-[url('{{ asset('images/backgrounds/hero-image.png') }}')] bg-cover bg-no-repeat bg-center relative z-0">
